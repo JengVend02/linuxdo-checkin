@@ -148,13 +148,11 @@ class LinuxDoBrowser:
         if not user_ele:
             if "avatar" in self.page.html:
                 logger.info("Cookie 登录验证成功 (通过 avatar)")
-                self.print_connect_info()
                 return True
             logger.error("Cookie 登录验证失败 (未找到 current-user)，Cookie 可能已过期")
             return False
         else:
             logger.info("Cookie 登录验证成功")
-            self.print_connect_info()
             return True
 
     def login(self):
@@ -211,8 +209,6 @@ class LinuxDoBrowser:
         except Exception as e:
             logger.error(f"登录请求异常: {e}")
             return False
-
-        self.print_connect_info()  # 打印连接信息
 
         # Step 3: Pass cookies to DrissionPage
         logger.info("同步 Cookie 到 DrissionPage...")
@@ -325,7 +321,7 @@ class LinuxDoBrowser:
                     logger.error("点击主题失败，程序终止")
                     return
                 logger.info("完成浏览任务")
-
+            self.print_connect_info()  # 打印连接信息
             self.send_notifications(BROWSE_ENABLED)  # 发送通知
         finally:
             try:
@@ -371,8 +367,8 @@ class LinuxDoBrowser:
                 requirement = cells[2].text.strip() if cells[2].text.strip() else "0"
                 info.append([project, current, requirement])
 
-        print("--------------Connect Info-----------------")
-        print(tabulate(info, headers=["项目", "当前", "要求"], tablefmt="pretty"))
+        logger.info("--------------Connect Info-----------------")
+        logger.info("\n" + tabulate(info, headers=["项目", "当前", "要求"], tablefmt="pretty"))
 
     def send_notifications(self, browse_enabled):
         """发送签到通知"""
