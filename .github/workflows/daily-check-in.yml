@@ -16,24 +16,33 @@ jobs:
     steps:
       - id: set-matrix
         shell: python  # <--- 关键点：告诉 GitHub 这步跑的是 Python
+        env:
+          # 将 Secret 放入环境变量，避免 Python 解释时出现语法截断
+          RAW_COOKIES: ${{ secrets.LINUXDO_COOKIES }}
         run: |
           import os
           import json
+          import sys
 
-          # 从环境变量获取原始数据（最安全，避免转义问题）
-          raw_cookies = """${{ secrets.LINUXDO_COOKIES }}"""
+          # 从环境变量获取，避免直接在 run 中导致的转义灾难
+          raw_data = os.environ.get("RAW_COOKIES", "")
           
-          # 根据你的数据特征：Cookie 组之间是用 ",_t=" 这种形式连接的
-          # 或者如果你的规则是简单的以逗号分隔多个账号：
-          # 我们先处理掉可能存在的换行，再按逗号分割
-          cookie_list = [c.strip() for c in raw_cookies.split(',') if c.strip()]
+          if not raw_data:
+              print("Error: LINUXDO_COOKIES is empty")
+              sys.exit(1)
+
+          # 解析逻辑：按逗号拆分多个账号
+          # 处理可能存在的换行和空格
+          cookie_list = [c.strip() for c in raw_data.split(',') if c.strip()]
           
-          # 生成 GitHub Actions 需要的 JSON 格式
           matrix_json = json.dumps(cookie_list)
           
-          # 写入输出
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f'matrix={matrix_json}\n')
+          # 写入输出文件
+          output_file = os.environ.get('GITHUB_OUTPUT')
+          with open(output_file, 'a', encoding='utf-8') as f:
+              f.write(f"matrix={matrix_json}\n")
+          
+          print(f"Generated Matrix: {matrix_json}")
           
 
   run_script:
