@@ -8,8 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
+  # 新增一个 Job 用于解析 Secrets 中的用户名字符串
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          # 将逗号分隔的字符串转换为 JSON 数组格式
+          # 例如 "a,b" 变为 ["a","b"]
+          USERS=$(echo "\"${{ secrets.LINUXDO_COOKIES }}\"" | sed 's/,/","/g')
+          echo "matrix=[$USERS]" >> $GITHUB_OUTPUT
+          
+
   run_script:
+    needs: prepare # 确保在解析完用户名后再运行
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cookies: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: browser-actions/setup-chrome@v1
@@ -39,7 +59,7 @@ jobs:
           WXPUSH_TOKEN: ${{ secrets.WXPUSH_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LINUXDO_COOKIES: ${{ secrets.LINUXDO_COOKIES }}
+          LINUXDO_COOKIES: ${{ matrix.cookies }}
           BROWSE_ENABLED: ${{ secrets.BROWSE_ENABLED }}
         run: |
           python main.py
