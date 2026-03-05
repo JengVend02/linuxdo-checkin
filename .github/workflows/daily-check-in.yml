@@ -16,10 +16,23 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          # 将逗号分隔的字符串转换为 JSON 数组格式
-          # 例如 "a,b" 变为 ["a","b"]
-          USERS=$(echo "\"${{ secrets.LINUXDO_COOKIES }}\"" | sed 's/,/","/g')
-          echo "matrix=[$USERS]" >> $GITHUB_OUTPUT
+          import os
+          import json
+
+          # 从环境变量获取原始数据（最安全，避免转义问题）
+          raw_cookies = """${{ secrets.LINUXDO_COOKIES }}"""
+          
+          # 根据你的数据特征：Cookie 组之间是用 ",_t=" 这种形式连接的
+          # 或者如果你的规则是简单的以逗号分隔多个账号：
+          # 我们先处理掉可能存在的换行，再按逗号分割
+          cookie_list = [c.strip() for c in raw_cookies.split(',') if c.strip()]
+          
+          # 生成 GitHub Actions 需要的 JSON 格式
+          matrix_json = json.dumps(cookie_list)
+          
+          # 写入输出
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'matrix={matrix_json}\n')
           
 
   run_script:
