@@ -12,9 +12,9 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      indices: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - id: set-matrix
+      - id: set-indices
         shell: python  # <--- 关键点：告诉 GitHub 这步跑的是 Python
         env:
           # 将 Secret 放入环境变量，避免 Python 解释时出现语法截断
@@ -22,33 +22,15 @@ jobs:
         run: |
           import os
           import json
-          import sys
-
-          # 从环境变量获取，避免直接在 run 中导致的转义灾难
-          raw_data = os.environ.get("RAW_COOKIES", "")
           
-          if not raw_data:
-              print("Error: LINUXDO_COOKIES is empty")
-              sys.exit(1)
-
-          # 解析逻辑：按逗号拆分多个账号
-          # 处理可能存在的换行和空格
+          raw_data = os.environ.get("RAW_COOKIES", "").strip()
           cookie_list = [c.strip() for c in raw_data.split(',') if c.strip()]
           
-          if not cookie_list:
-              print("::error::No valid cookies found after splitting!")
-              sys.exit(1)
+          # 只输出索引列表，如 [0, 1]
+          indices = list(range(len(cookie_list)))
           
-          # 3. 序列化为 JSON 字符串
-          matrix_json = json.dumps(cookie_list)
-          
-          # 4. 写入 GITHUB_OUTPUT (使用 a 模式追加)
-          # 注意：变量名必须是 matrix，与 outputs 中的声明一致
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
-              f.write(f"matrix={matrix_json}\n")
-          
-          # 5. 在日志中打印，方便你调试看输出是否正确
-          print(f"Successfully generated matrix: {matrix_json}")
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"indices={json.dumps(indices)}\n")
           
 
   run_script:
@@ -57,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cookies: ${{ fromJson(needs.prepare.outputs.matrix) }}
+        index: ${{ fromJson(needs.prepare.outputs.indices) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -88,10 +70,23 @@ jobs:
           WXPUSH_TOKEN: ${{ secrets.WXPUSH_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LINUXDO_COOKIES: ${{ matrix.cookies }}
+          # 依然传入完整的加密串
+          ALL_COOKIES: ${{ secrets.LINUXDO_COOKIES }}
+          # 传入当前矩阵的索引
+          ACCOUNT_INDEX: ${{ matrix.index }}
           BROWSE_ENABLED: ${{ secrets.BROWSE_ENABLED }}
         run: |
-          python main.py
+          # 运行一个临时 Python 脚本来提取对应的 Cookie 并执行
+          python -c "
+          import os, subprocess
+          index = int(os.environ['ACCOUNT_INDEX'])
+          cookies_str = os.environ['ALL_COOKIES']
+          # 按逗号分割，取当前索引对应的那个账号
+          current_cookie = [c.strip() for c in cookies_str.split(',') if c.strip()][index]
+          os.environ['LINUXDO_COOKIES'] = current_cookie
+          # 调用你的主程序
+          subprocess.run(['python', 'main.py'], env=os.environ)
+          "
 
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
