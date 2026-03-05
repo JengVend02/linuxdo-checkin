@@ -15,6 +15,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
+        shell: python  # <--- 关键点：告诉 GitHub 这步跑的是 Python
         run: |
           import os
           import json
