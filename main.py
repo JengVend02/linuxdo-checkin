@@ -120,6 +120,8 @@ class LinuxDoBrowser:
         return cookies
 
     def login_with_cookies(self, cookie_str: str) -> bool:
+        global USERNAME  # <--- 必须添加这一行
+
         """使用手动设置的 Cookie 直接登录，跳过账号密码流程"""
         logger.info("检测到手动 Cookie，尝试 Cookie 登录...")
         dp_cookies = self.parse_cookie_string(cookie_str)
@@ -152,6 +154,11 @@ class LinuxDoBrowser:
             logger.error("Cookie 登录验证失败 (未找到 current-user)，Cookie 可能已过期")
             return False
         else:
+            # 提取 src 属性
+            img_src = self.page.ele('#current-user img.avatar').attr('src')
+
+            # 解析用户名 (split方式)
+            USERNAME = img_src.split('/')[3] if img_src else "unknown"
             logger.info("Cookie 登录验证成功")
             return True
 
