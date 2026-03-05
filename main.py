@@ -7,6 +7,7 @@ import os
 import random
 import time
 import functools
+import base64
 from loguru import logger
 from DrissionPage import ChromiumOptions, Chromium
 from tabulate import tabulate
@@ -154,12 +155,14 @@ class LinuxDoBrowser:
             logger.error("Cookie 登录验证失败 (未找到 current-user)，Cookie 可能已过期")
             return False
         else:
-            # 提取 src 属性
-            img_src = self.page.ele('#current-user img.avatar').attr('src')
-
-            # 解析用户名 (split方式)
-            USERNAME = img_src.split('/')[3] if img_src else "unknown"
-            logger.info("Cookie 登录验证成功")
+            # 1. 提取用户名文本
+            raw_username = img_src.split('/')[3] if img_src else "unknown"
+            
+            # 2. 对用户名进行 Base64 编码
+            # .encode('utf-8') 转为字节，b64encode 编码，.decode('utf-8') 转回普通文本
+            USERNAME_B64 = base64.b64encode(raw_username.encode('utf-8')).decode('utf-8')
+            
+            logger.info(f"Cookie 登录验证成功，原用户名: {raw_username}, 编码后: {USERNAME_B64}")
             return True
 
     def login(self):
