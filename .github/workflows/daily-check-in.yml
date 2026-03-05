@@ -12,7 +12,7 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      indices: ${{ steps.set-matrix.outputs.matrix }}
+      indices: ${{ steps.set-matrix.outputs.indices }}
     steps:
       - id: set-indices
         shell: python  # <--- 关键点：告诉 GitHub 这步跑的是 Python
