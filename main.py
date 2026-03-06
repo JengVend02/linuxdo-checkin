@@ -121,7 +121,6 @@ class LinuxDoBrowser:
         return cookies
 
     def login_with_cookies(self, cookie_str: str) -> bool:
-        global USERNAME  # <--- 必须添加这一行
 
         """使用手动设置的 Cookie 直接登录，跳过账号密码流程"""
         logger.info("检测到手动 Cookie，尝试 Cookie 登录...")
